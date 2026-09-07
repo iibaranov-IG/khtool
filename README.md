@@ -93,7 +93,7 @@ IPv6 address: fe80::2a36:38ff:fexx:xxxx
 {"audio":{"out":{"mute":false}}}
 ```
 
-Save settings (not supported on KH 750 DSP)
+Save settings (KH 80 only)
 ```
 python3 ./khtool.py -i en1 --save         
 *** Device: Right ***
@@ -102,6 +102,12 @@ python3 ./khtool.py -i en1 --save
 *** Device: Left ***
 {"device":{"save_settings":true}}
 ```
+
+The explicit `--save` command is only sent to KH 80. On KH 80, changes must be
+saved to survive a power cycle. The maintainer clarified that other KH DSP models
+save changes automatically; see the [KH 120 II discussion](https://github.com/schwinn/khtool/issues/5#issuecomment-4966543542).
+Running `--save` on those models does not send a save command. This is not an
+indication that an earlier setting change failed; check its response separately.
 
 Using the expert option - Querying the input level
 ``` 
@@ -152,7 +158,7 @@ options:
   --backup BACKUP       generate json backup of loudspeaker(s) and save it to [filename]
   --restore RESTORE     restore configuration from [filename]
   --comment COMMENT     comment for backup file
-  --save                performs a save_settings command to the devices (only for KH 80/KH 150/KH 120 II)
+  --save                performs a save_settings command to the devices (only for KH 80)
   --brightness BRIGHTNESS
                         set logo brightness [0-100] (only for KH 80/KH 150/KH 120 II)
   --delay DELAY         set delay in 1/48khz samples [0-3360]
