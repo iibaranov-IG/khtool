@@ -9,10 +9,29 @@ Please install my fork of the pyssc library.
 
 ## Usage
 
-You must specify the name of the network interface to which the speakers are connected.
+For link-local IPv6 device addresses without a zone suffix (for example,
+`fe80::1234`), specify the network interface to which the speakers are connected.
 ```
 python3 ./khtool.py -i [interface name]
 ```
+
+`-i` supplies the IPv6 zone for those addresses; it does **not** select or restrict
+the interfaces used for discovery. On Windows, supply the numeric interface index
+(see Notes below). An address that already includes a zone, such as `fe80::1234%14`,
+keeps that zone; `-i` is not appended again or used to override it.
+
+Discovery and queries to global or unique-local IPv6 addresses do not require `-i`:
+
+```
+python3 ./khtool.py --scan
+python3 ./khtool.py -q
+```
+
+As before, discovery saves `khtool.json` and exits; run the query separately.
+If a selected device needs a zone but `-i` is missing, the tool reports its address
+and stops before connecting to any selected device. Use `-t` to select one device
+from the saved setup. For other addresses, routing remains the operating system's
+responsibility, even when `-i` is supplied.
 
 ## Examples
 
@@ -143,7 +162,7 @@ Print help
 ```
 python3 ./khtool.py -h
 usage: khtool.py [-h] [--scan] [-q] [--backup BACKUP] [--restore RESTORE] [--comment COMMENT] [--save] [--brightness BRIGHTNESS] [--delay DELAY] [--dimm DIMM] [--level LEVEL] [--mute]
-                 [--unmute] [--expert EXPERT] -i INTERFACE [-t {all,0,1,2,3,4,5,6,7,8}] [-v]
+                 [--unmute] [--expert EXPERT] [-i INTERFACE] [-t {all,0,1,2,3,4,5,6,7,8}] [-v]
 
 options:
   -h, --help            show this help message and exit
@@ -162,7 +181,8 @@ options:
   --unmute              unmute speaker(s)
   --expert EXPERT       send a custom command
   -i INTERFACE, --interface INTERFACE
-                        network interface to use (e.g. en0)
+                        IPv6 zone for unscoped link-local device addresses
+                        (e.g. en0; Windows: 14). Not used for other addresses or discovery
   -t {all,0,1,2,3,4,5,6,7,8}, --target {all,0,1,2,3,4,5,6,7,8}
                         use all speakers or only the selected one
   -v, --version         show program's version number and exit
@@ -190,3 +210,8 @@ python khtool.py -i 14 --expert {\"m\":{\"audio\":null}} -t 0
 Communication with the speakers is exclusively via IPv6. Therefore, it must be activated in the operating system.
 
 Use at your own risk. 
+
+## Tests
+
+Run the offline regression tests with `python3 -m unittest discover -s tests -v`.
+These mock pyssc and do not discover, connect to, or control speakers.

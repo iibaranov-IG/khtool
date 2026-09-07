@@ -8,6 +8,7 @@ import argparse
 import time
 import signal
 import re
+import ipaddress
 
 __author__ = "Thorsten Schwinn, LeanderBlume, Stephen JK Hsieh"
 __version__ = "0.197"
@@ -32,12 +33,19 @@ def send_print(device, command):
 
 
 def get_interface(device):
-    pattern = "^fe80::"
-    result = re.match(pattern, str(device.ip))
-    if result:
-        return interface
-    else:
+    """Return the zone suffix needed by pyssc, not a discovery interface filter."""
+    address, separator, scope = str(device.ip).partition("%")
+    ip = ipaddress.IPv6Address(address)
+    if separator and not scope:
+        raise ValueError(f"Device {device.ip} has an empty IPv6 zone suffix.")
+    if not ip.is_link_local or scope:
         return ""
+    if not interface:
+        raise ValueError(
+            f"Link-local device {device.ip} requires -i/--interface "
+            "(e.g. en0, or an interface index such as 14 on Windows)."
+        )
+    return interface
 
 
 def _path_to_json_query(path):
@@ -456,8 +464,11 @@ def main():
         "-i",
         "--interface",
         action="store",
-        required=True,
-        help="network interface to use (e.g. en0)",
+        default="",
+        help=(
+            "IPv6 zone for unscoped link-local device addresses "
+            "(e.g. en0; Windows: 14). Not used for other addresses or discovery"
+        ),
     )
     parser.add_argument(
         "-t",
@@ -473,7 +484,7 @@ def main():
     args = parser.parse_args()
 
     global interface
-    interface = "%" + args.interface
+    interface = "%" + args.interface if args.interface else ""
 
     if args.brightness is not None:
         if args.brightness < 0 or args.brightness > 100:
@@ -523,6 +534,13 @@ def main():
         exit(1)
     else:
         target_devices = [found_setup.ssc_devices[int(args.target)]]
+
+    # Validate every selected target before opening any connection or sending commands.
+    try:
+        for device in target_devices:
+            get_interface(device)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     # Attempt to connect to all target devices
     for device in target_devices:
