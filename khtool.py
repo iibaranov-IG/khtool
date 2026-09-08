@@ -402,7 +402,7 @@ def handle_device(args, device):
 
     if args.save:
         if product != "KH 80":
-            print("Save is not supported on this device.")
+            print("Explicit --save is only used for KH 80; no save command sent.")
         else:
             send_print(device, '{"device":{"save_settings":true}}')
 
@@ -429,7 +429,7 @@ def main():
     parser.add_argument(
         "--save",
         action="store_true",
-        help="performs a save_settings command to the devices (only for KH 80/KH 150/KH 120 II/KH 150 AES67)",
+        help="performs a save_settings command to the devices (only for KH 80)",
     )
     parser.add_argument(
         "--brightness",
