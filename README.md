@@ -5,14 +5,33 @@ This is a simple tool for querying or changing the settings of Neumann KH DSP lo
 
 Please install my fork of the pyssc library.
 
-`pip3 install https://github.com/schwinn/pyssc/archive/master.zip#egg=pyssc`
+`pip3 install https://github.com/schwinn/pyssc/archive/refs/heads/main.zip#egg=pyssc`
 
 ## Usage
 
-You must specify the name of the network interface to which the speakers are connected.
+For link-local IPv6 device addresses without a zone suffix (for example,
+`fe80::1234`), specify the network interface to which the speakers are connected.
 ```
 python3 ./khtool.py -i [interface name]
 ```
+
+`-i` supplies the IPv6 zone for those addresses; it does **not** select or restrict
+the interfaces used for discovery. On Windows, supply the numeric interface index
+(see Notes below). An address that already includes a zone, such as `fe80::1234%14`,
+keeps that zone; `-i` is not appended again or used to override it.
+
+Discovery and queries to global or unique-local IPv6 addresses do not require `-i`:
+
+```
+python3 ./khtool.py --scan
+python3 ./khtool.py -q
+```
+
+As before, discovery saves `khtool.json` and exits; run the query separately.
+If a selected device needs a zone but `-i` is missing, the tool reports its address
+and stops before connecting to any selected device. Use `-t` to select one device
+from the saved setup. For other addresses, routing remains the operating system's
+responsibility, even when `-i` is supplied.
 
 ## Examples
 
@@ -93,7 +112,7 @@ IPv6 address: fe80::2a36:38ff:fexx:xxxx
 {"audio":{"out":{"mute":false}}}
 ```
 
-Save settings (not supported on KH 750 DSP)
+Save settings (KH 80 only)
 ```
 python3 ./khtool.py -i en1 --save         
 *** Device: Right ***
@@ -102,6 +121,12 @@ python3 ./khtool.py -i en1 --save
 *** Device: Left ***
 {"device":{"save_settings":true}}
 ```
+
+The explicit `--save` command is only sent to KH 80. On KH 80, changes must be
+saved to survive a power cycle. The maintainer clarified that other KH DSP models
+save changes automatically; see the [KH 120 II discussion](https://github.com/schwinn/khtool/issues/5#issuecomment-4966543542).
+Running `--save` on those models does not send a save command. This is not an
+indication that an earlier setting change failed; check its response separately.
 
 Using the expert option - Querying the input level
 ``` 
@@ -143,7 +168,7 @@ Print help
 ```
 python3 ./khtool.py -h
 usage: khtool.py [-h] [--scan] [-q] [--backup BACKUP] [--restore RESTORE] [--comment COMMENT] [--save] [--brightness BRIGHTNESS] [--delay DELAY] [--dimm DIMM] [--level LEVEL] [--mute]
-                 [--unmute] [--expert EXPERT] -i INTERFACE [-t {all,0,1,2,3,4,5,6,7,8}] [-v]
+                 [--unmute] [--expert EXPERT] [-i INTERFACE] [-t {all,0,1,2,3,4,5,6,7,8}] [-v]
 
 options:
   -h, --help            show this help message and exit
@@ -152,7 +177,7 @@ options:
   --backup BACKUP       generate json backup of loudspeaker(s) and save it to [filename]
   --restore RESTORE     restore configuration from [filename]
   --comment COMMENT     comment for backup file
-  --save                performs a save_settings command to the devices (only for KH 80/KH 150/KH 120 II)
+  --save                performs a save_settings command to the devices (only for KH 80)
   --brightness BRIGHTNESS
                         set logo brightness [0-100] (only for KH 80/KH 150/KH 120 II)
   --delay DELAY         set delay in 1/48khz samples [0-3360]
@@ -162,7 +187,8 @@ options:
   --unmute              unmute speaker(s)
   --expert EXPERT       send a custom command
   -i INTERFACE, --interface INTERFACE
-                        network interface to use (e.g. en0)
+                        IPv6 zone for unscoped link-local device addresses
+                        (e.g. en0; Windows: 14). Not used for other addresses or discovery
   -t {all,0,1,2,3,4,5,6,7,8}, --target {all,0,1,2,3,4,5,6,7,8}
                         use all speakers or only the selected one
   -v, --version         show program's version number and exit
@@ -190,3 +216,8 @@ python khtool.py -i 14 --expert {\"m\":{\"audio\":null}} -t 0
 Communication with the speakers is exclusively via IPv6. Therefore, it must be activated in the operating system.
 
 Use at your own risk. 
+
+## Tests
+
+Run the offline regression tests with `python3 -m unittest discover -s tests -v`.
+These mock pyssc and do not discover, connect to, or control speakers.
